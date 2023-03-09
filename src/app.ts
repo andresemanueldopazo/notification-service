@@ -1,7 +1,10 @@
 import express from "express";
 import bodyParser from "body-parser";
+import helmet from "helmet";
 
 const app = express();
+
+app.use(helmet());
 
 type Parent = {
   name: string

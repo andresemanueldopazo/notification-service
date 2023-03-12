@@ -7,17 +7,14 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 
-type Parent = {
-  name: string
-  // neccessary to do server-sent events
-  response: express.Response
-};
-
-const parents: Array<Parent> = [];
+// for now use the parent name
+type ParentId = string;
+// shared between /connect and /notify
+const Parents: Record<ParentId, express.Response> = {};
 
 // Returns the connected parents
 app.get("/connected", (req, res) => {
-  res.send(parents.map((p) => p.name));
+  res.send(Object.keys(Parents));
 });
 
 // Add the parent to the connected list of parents
@@ -34,7 +31,9 @@ app.get("/connect", (req, res) => {
       // eslint-disable-next-line quote-props
       "Connection": "keep-alive",
     });
-    parents.push({ name: parent, response: res });
+    // store the response object to send notifications when needed
+    Parents[parent] = res;
+    // tell parent that it has been connected
     res.write("event: message\n");
     res.write(`data: ${parent} connected!\n`);
     res.write("\n\n");
@@ -43,7 +42,7 @@ app.get("/connect", (req, res) => {
 
 // Sends a notification to all connected parents
 app.get("/notify", (req, res) => {
-  parents.forEach(({ response }) => {
+  Object.values(Parents).forEach((response) => {
     response.write("event: message\n");
     response.write("data: Notification!\n");
     response.write("\n\n");

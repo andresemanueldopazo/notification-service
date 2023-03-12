@@ -37,6 +37,11 @@ app.get("/connect", (req, res) => {
     res.write("event: message\n");
     res.write(`data: ${parent} connected!\n`);
     res.write("\n\n");
+    // attach handler when client closes the connection
+    req.on("close", () => {
+      console.log(`Parent ${parent} discnnected`);
+      delete Parents[parent];
+    });
   }
 });
 

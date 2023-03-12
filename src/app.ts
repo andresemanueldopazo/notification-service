@@ -20,10 +20,24 @@ app.get("/connected", (req, res) => {
 });
 
 // Add the parent to the connected list of parents
-app.post("/connect", bodyParser.text(), (req, res) => {
-  const parentName = req.body;
-  parents.push({ name: parentName, response: res });
-  res.send(`${parentName} connected!`);
+app.get("/connect", (req, res) => {
+  const { parent } = req.query;
+
+  if (typeof parent !== "string") {
+    res.send("parent query parameter needed!");
+  } else {
+    // neccessary headers to keep alive the http connection
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      // eslint-disable-next-line quote-props
+      "Connection": "keep-alive",
+    });
+    parents.push({ name: parent, response: res });
+    res.write("event: message\n");
+    res.write(`data: ${parent} connected!\n`);
+    res.write("\n\n");
+  }
 });
 
 const port = 5000;

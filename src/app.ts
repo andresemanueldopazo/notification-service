@@ -9,6 +9,7 @@ app.use(cors());
 
 type Parent = {
   name: string
+  // neccessary to do server-sent events
   response: express.Response
 };
 
@@ -38,6 +39,16 @@ app.get("/connect", (req, res) => {
     res.write(`data: ${parent} connected!\n`);
     res.write("\n\n");
   }
+});
+
+// Sends a notification to all connected parents
+app.get("/notify", (req, res) => {
+  parents.forEach(({ response }) => {
+    response.write("event: message\n");
+    response.write("data: Notification!\n");
+    response.write("\n\n");
+  });
+  res.send("All parents notified");
 });
 
 const port = 5000;

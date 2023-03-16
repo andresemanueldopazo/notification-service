@@ -1,28 +1,35 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
+// security headers
+// TO DO: research about if they are enough safety
 app.use(helmet());
+// any site can interact with all endpoints of this service
 app.use(cors());
 
-// for now use the parent name
-type ParentId = string;
-// shared between /connect and /notify
-const Parents: Record<ParentId, express.Response> = {};
+type ConnectionId = string;
 
-// Returns the connected parents
+interface Connection {
+  write: express.Response["write"]
+}
+
+// shared between /connect and /notify
+const Connections: Record<ConnectionId, Connection> = {};
+
+// Returns the connected ids
 app.get("/connected", (req, res) => {
-  res.send(Object.keys(Parents));
+  res.send(Object.keys(Connections));
 });
 
-// Add the parent to the connected list of parents
-app.get("/connect", (req, res) => {
-  const { parent } = req.query;
+app.get("/connect", cookieParser(), (req, res) => {
+  const { id } = req.cookies;
 
-  if (typeof parent !== "string") {
-    res.send("parent query parameter needed!");
+  if (typeof id !== "string") {
+    res.send("error: missing 'id' key in cookies");
   } else {
     // neccessary headers to keep alive the http connection
     res.writeHead(200, {
@@ -32,22 +39,22 @@ app.get("/connect", (req, res) => {
       "Connection": "keep-alive",
     });
     // store the response object to send notifications when needed
-    Parents[parent] = res;
+    Connections[id] = res;
     // tell parent that it has been connected
     res.write("event: message\n");
-    res.write(`data: ${parent} connected!\n`);
+    res.write(`data: ${id}\n`);
     res.write("\n\n");
     // attach handler when client closes the connection
     req.on("close", () => {
-      console.log(`Parent ${parent} discnnected`);
-      delete Parents[parent];
+      console.log(`${id} disconnected`);
+      delete Connections[id];
     });
   }
 });
 
 // Sends a notification to all connected parents
 app.get("/notify", (req, res) => {
-  Object.values(Parents).forEach((response) => {
+  Object.values(Connections).forEach((response) => {
     response.write("event: message\n");
     response.write("data: Notification!\n");
     response.write("\n\n");

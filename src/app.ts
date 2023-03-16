@@ -6,9 +6,9 @@ import cookieParser from "cookie-parser";
 const app = express();
 
 // security headers
-// TO DO: research about if they are enough safety
+// TO DO: research about if these are enough safety
 app.use(helmet());
-// any site can interact with all endpoints of this service
+// ANY site can interact with all endpoints of this service
 app.use(cors());
 
 type ConnectionId = string;
@@ -54,10 +54,10 @@ app.get("/connect", cookieParser(), (req, res) => {
 
 // Sends a notification to all connected parents
 app.get("/notify", (req, res) => {
-  Object.values(Connections).forEach((response) => {
-    response.write("event: message\n");
-    response.write("data: Notification!\n");
-    response.write("\n\n");
+  Object.values(Connections).forEach((connection) => {
+    connection.write("event: message\n");
+    connection.write("data: Notification!\n");
+    connection.write("\n\n");
   });
   res.send("All parents notified");
 });

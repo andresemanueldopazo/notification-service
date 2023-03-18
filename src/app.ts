@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import cookieParser from "cookie-parser";
 
 const app = express();
 
@@ -25,11 +24,14 @@ app.get("/connected", (req, res) => {
   res.send(Object.keys(Connections));
 });
 
-app.get("/connect", cookieParser(), (req, res) => {
-  const { id } = req.cookies;
+app.get("/connect", (req, res) => {
+  const { id } = req.query;
+  const requesterIP = req.ip;
+  console.log(`Serving to ${requesterIP}`);
 
   if (typeof id !== "string") {
-    res.send("error: missing 'id' key in cookies");
+    console.log(`${requesterIP} did not sent 'id' query parameter`);
+    res.send("error: missing 'id' in query parameters");
   } else {
     // neccessary headers to keep alive the http connection
     res.writeHead(200, {
@@ -42,7 +44,7 @@ app.get("/connect", cookieParser(), (req, res) => {
     Connections[id] = res;
     // tell parent that it has been connected
     res.write("event: message\n");
-    res.write(`data: ${id}\n`);
+    res.write(`data: ${id} connected\n`);
     res.write("\n\n");
     // attach handler when client closes the connection
     req.on("close", () => {
@@ -59,7 +61,7 @@ app.get("/notify", (req, res) => {
     connection.write("data: Notification!\n");
     connection.write("\n\n");
   });
-  res.send("All parents notified");
+  res.send("All ids notified");
 });
 
 const port = 5000;

@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 
 function App() {
-  const [parentName, setParentName] = useState("");
+  const [id, setId] = useState("");
   const [serverEvents, setServerEvents] = useState<EventSource | undefined>(undefined);
   const [sseData, setSseData] = useState<unknown>(undefined);
 
   return (
     <>
       <input
-        onChange={async (e) => setParentName(e.target.value)}
+        onChange={async (e) => setId(e.target.value)}
         placeholder="Enter parent name..."
       />
       <button
         onClick={() => {
-          const events = new EventSource(`http://localhost:5000/connect?parent=${parentName}`);
+          const events = new EventSource(`http://localhost:5000/connect?id=${id}`);
           events.onopen = (e) => {
             console.log("Connection open!");
           }

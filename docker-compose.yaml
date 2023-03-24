@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  server:
+    build:
+      context: ./
+    ports:
+      - 5000:5000
+    restart: always
+    # depends_on:
+    #   database:
+    #     condition: service_healthy
+
+  example-frontend:
+    build:
+      context: ./frontend-example
+    ports:
+      - 3000:80
+    restart: always
+
+  # database:
+  #   image: postgres:alpine
+  #   user: postgres
+  #   environment:
+  #     POSTGRES_DB: user
+  #     POSTGRES_PASSWORD: pass
+  #   restart: always
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5

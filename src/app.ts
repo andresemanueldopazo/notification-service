@@ -13,7 +13,8 @@ app.use(cors());
 type ConnectionId = string;
 
 interface Connection {
-  write: express.Response["write"]
+  // method for sending the notification to the client
+  write: express.Response["write"];
 }
 
 // shared between /connect and /notify
@@ -54,7 +55,7 @@ app.get("/connect", (req, res) => {
   }
 });
 
-// Sends a notification to all connected parents
+// Sends a notification to all connected clients
 app.get("/notify", (req, res) => {
   Object.values(Connections).forEach((connection) => {
     connection.write("event: message\n");

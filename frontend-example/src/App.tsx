@@ -35,8 +35,6 @@ function App() {
       <button
         onClick={() => {
           serverEvents?.close();
-          if (serverEvents)
-            console.log(`server events connection: ${serverEvents?.readyState}`)
           setServerEvents(undefined);
           setSseData("Disconnected");
         }}

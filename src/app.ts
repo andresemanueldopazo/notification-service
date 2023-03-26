@@ -20,6 +20,11 @@ interface Connection {
 // shared between /connect and /notify
 const Connections: Record<ConnectionId, Connection> = {};
 
+// health
+app.get("/", (req, res) => {
+  res.send("Server is alive");
+});
+
 // Returns the connected ids
 app.get("/connected", (req, res) => {
   res.send(Object.keys(Connections));

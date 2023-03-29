@@ -61,7 +61,7 @@ app.get("/connect", (req, res) => {
 });
 
 // Sends a notification to all connected clients
-app.get("/notify", (req, res) => {
+app.get("/notifyAll", (req, res) => {
   Object.values(Connections).forEach((connection) => {
     connection.write("event: message\n");
     connection.write("data: Notification!\n");

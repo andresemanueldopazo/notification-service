@@ -13,7 +13,7 @@ app.use(cors());
 type ConnectionId = string;
 
 interface Connection {
-  // method for sending the notification to the client
+  // method used to send the notification to the client
   write: express.Response["write"];
 }
 
@@ -33,7 +33,7 @@ app.get("/connected", (req, res) => {
 app.get("/connect", (req, res) => {
   const { id } = req.query;
   const requesterIP = req.ip;
-  console.log(`Serving to ${requesterIP}`);
+  console.log(`Serving to ${requesterIP}...`);
 
   if (typeof id !== "string") {
     console.log(`${requesterIP} did not sent 'id' query parameter`);
@@ -57,6 +57,30 @@ app.get("/connect", (req, res) => {
       console.log(`${id} disconnected`);
       delete Connections[id];
     });
+  }
+});
+
+// Sends a notification to a particular client if it is connected
+app.get("/notify", (req, res) => {
+  const { id } = req.query;
+  const requesterIP = req.ip;
+  console.log(`Serving to ${requesterIP}...`);
+
+  if (typeof id !== "string") {
+    console.log(`${requesterIP} did not sent 'id' query parameter`);
+    res.send("error: missing 'id' in query parameters");
+  } else {
+    const connection = Connections[id];
+    if (connection === undefined) {
+      // this particular client is not connected
+      res.send(`The client with id=${id} is not connected`);
+    } else {
+      // it is connected. send notification
+      connection.write("event: message\n");
+      connection.write("data: Notification!\n");
+      connection.write("\n\n");
+      res.send(`The client with id=${id} was notified`);
+    }
   }
 });
 

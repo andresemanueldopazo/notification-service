@@ -17,7 +17,7 @@ interface Connection {
   write: express.Response["write"];
 }
 
-// shared between /connect and /notify
+// shared between /connect and /notify*
 const Connections: Record<ConnectionId, Connection> = {};
 
 // health
@@ -31,9 +31,10 @@ app.get("/connected", (req, res) => {
 });
 
 app.get("/connect", (req, res) => {
-  const { id } = req.query;
   const requesterIP = req.ip;
   console.log(`Serving to ${requesterIP}...`);
+
+  const { id } = req.query;
 
   if (typeof id !== "string") {
     console.log(`${requesterIP} did not sent 'id' query parameter`);
@@ -62,9 +63,10 @@ app.get("/connect", (req, res) => {
 
 // Sends a notification to a particular client if it is connected
 app.get("/notify", (req, res) => {
-  const { id } = req.query;
   const requesterIP = req.ip;
   console.log(`Serving to ${requesterIP}...`);
+
+  const { id } = req.query;
 
   if (typeof id !== "string") {
     console.log(`${requesterIP} did not sent 'id' query parameter`);
@@ -75,9 +77,14 @@ app.get("/notify", (req, res) => {
       // this particular client is not connected
       res.send(`The client with id=${id} is not connected`);
     } else {
-      // it is connected. send notification
+      // it is connected!
+      // the notification contents will be all the query params received
+      // BUT without the id
+      const notificationContents = { ...req.query };
+      delete notificationContents.id;
+      // send notification contents
       connection.write("event: message\n");
-      connection.write("data: Notification!\n");
+      connection.write(`data: ${JSON.stringify(notificationContents)}\n`);
       connection.write("\n\n");
       res.send(`The client with id=${id} was notified`);
     }

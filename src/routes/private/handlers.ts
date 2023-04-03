@@ -1,17 +1,17 @@
 import { Request, Response } from "express";
 
-type ConnectionId = string;
-
-interface Connection {
-  // method used to send the notification to the client
-  write: Response["write"];
-}
+import { Connection, ConnectionId } from "../../domain/entities";
+import { isAuthorizedToConnect } from "../../domain/logic";
 
 // shared between /connect and /notify*
-const Connections: Record<ConnectionId, Connection> = {};
+const Connections: Record<ConnectionId, Record<symbol, Connection>> = {};
 
 function connectedHandler(req: Request, res: Response) {
-  res.send(Object.keys(Connections));
+  const response: Array<{ id: ConnectionId, amountOfConnections: number }> = Object
+    .entries(Connections).map(([id, itsConnections]) => (
+      { id, amountOfConnections: Object.getOwnPropertySymbols(itsConnections).length }
+    ));
+  res.send(response);
 }
 
 /**
@@ -35,7 +35,7 @@ function connectedHandler(req: Request, res: Response) {
  * Attached handler to detect when the client closes the connection:
  * Removes the response object from the Connections object when the client closes the connection.
  */
-function connectHandler(req: Request, res: Response) {
+async function connectHandler(req: Request, res: Response) {
   const requesterIP = req.ip;
   console.log(`Serving to ${requesterIP}...`);
 
@@ -44,6 +44,8 @@ function connectHandler(req: Request, res: Response) {
   if (typeof id !== "string") {
     console.log(`${requesterIP} did not sent 'id' query parameter`);
     res.status(400).send("error: missing 'id' in query parameters");
+  } else if (!(await isAuthorizedToConnect(id))) {
+    res.status(400).send(`error: id ${id} is not allowed to connect`);
   } else {
     // neccessary headers to keep alive the http connection
     res.writeHead(200, {
@@ -53,7 +55,13 @@ function connectHandler(req: Request, res: Response) {
       "Connection": "keep-alive",
     });
     // store the response object to send notifications when needed
-    Connections[id] = res;
+    const resIndex = Symbol("");
+    if (Connections[id]) {
+      Connections[id][resIndex] = res;
+    } else {
+      Connections[id] = { [resIndex]: res };
+    }
+
     // tell parent that it has been connected
     res.write("event: message\n");
     res.write(`data: ${id} connected\n`);
@@ -61,7 +69,12 @@ function connectHandler(req: Request, res: Response) {
     // attach handler when client closes the connection
     req.on("close", () => {
       console.log(`${id} disconnected`);
-      delete Connections[id];
+      // delete this closed connection
+      delete Connections[id][resIndex];
+      if (Object.getOwnPropertySymbols(Connections[id]).length === 0) {
+        // no more connections of this id left. delete the id entry
+        delete Connections[id];
+      }
     });
   }
 }
@@ -97,8 +110,10 @@ function notifyHandler(req: Request, res: Response) {
     console.log(`${requesterIP} did not sent 'id' query parameter`);
     res.status(400).send("error: missing 'id' in query parameters\n");
   } else {
-    const connection = Connections[id];
-    if (connection === undefined) {
+    const connectionsOfThisId = Connections[id];
+    if (connectionsOfThisId === undefined
+      || Object.getOwnPropertySymbols(connectionsOfThisId).length === 0
+    ) {
       // this particular client is not connected
       res.send(`The client with id=${id} is not connected\n`);
     } else {
@@ -107,10 +122,13 @@ function notifyHandler(req: Request, res: Response) {
       // BUT without the id
       const notificationContents = { ...req.query };
       delete notificationContents.id;
-      // send notification contents
-      connection.write("event: message\n");
-      connection.write(`data: ${JSON.stringify(notificationContents)}\n`);
-      connection.write("\n\n");
+      // send notification contents to every connection associated to this id
+      Object.getOwnPropertySymbols(connectionsOfThisId).forEach((s) => {
+        const connection = connectionsOfThisId[s];
+        connection.write("event: message\n");
+        connection.write(`data: ${JSON.stringify(notificationContents)}\n`);
+        connection.write("\n\n");
+      });
       res.send(`The client with id=${id} was notified\n`);
     }
   }
@@ -132,10 +150,13 @@ function notifyHandler(req: Request, res: Response) {
  * Sends a message to the initiating client confirming that all connections were notified.
  */
 function notifyAllHandler(req: Request, res: Response) {
-  Object.values(Connections).forEach((connection) => {
-    connection.write("event: message\n");
-    connection.write("data: Notification!\n");
-    connection.write("\n\n");
+  Object.values(Connections).forEach((connectionsOfAnId) => {
+    Object.getOwnPropertySymbols(connectionsOfAnId).forEach((s) => {
+      const connection = connectionsOfAnId[s];
+      connection.write("event: message\n");
+      connection.write("data: Notification!\n");
+      connection.write("\n\n");
+    });
   });
   res.send("All ids notified\n");
 }

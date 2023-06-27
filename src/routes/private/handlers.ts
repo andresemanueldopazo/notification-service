@@ -63,7 +63,7 @@ async function connectHandler(req: Request, res: Response) {
     }
 
     // tell parent that it has been connected
-    res.write("event: message\n");
+    res.write("event: status\n");
     res.write(`data: ${id} connected\n`);
     res.write("\n\n");
     // attach handler when client closes the connection
@@ -120,12 +120,14 @@ function notifyHandler(req: Request, res: Response) {
       // it is connected!
       // the notification contents will be all the query params received
       // BUT without the id
+      const { type } = req.query;
       const notificationContents = { ...req.query };
       delete notificationContents.id;
+      delete notificationContents.type;
       // send notification contents to every connection associated to this id
       Object.getOwnPropertySymbols(connectionsOfThisId).forEach((s) => {
         const connection = connectionsOfThisId[s];
-        connection.write("event: message\n");
+        connection.write(`event: ${type}\n`);
         connection.write(`data: ${JSON.stringify(notificationContents)}\n`);
         connection.write("\n\n");
       });

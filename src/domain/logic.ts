@@ -11,7 +11,7 @@ async function isAuthorizedToConnect(id: ConnectionId): Promise<boolean> {
   const pgClient = new Client(process.env.PG_CONNECTION_URL || POSTGRES_CONFIG);
   await pgClient.connect();
   const response = await pgClient.query(
-    `SELECT "email" FROM "User" INNER JOIN "Session" ON "User"."id"="Session"."userId" AND "User"."email"='${id}';`,
+    `SELECT "email" FROM "User" WHERE "User"."email"='${id}';`,
   );
   pgClient.end();
   return response.rows?.length > 0;
